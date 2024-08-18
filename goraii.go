@@ -1,6 +1,9 @@
 package goraii
 
-import "os"
+import (
+	"os"
+	"sync"
+)
 
 type ResourceManager[T any] interface {
 	Enter() T
@@ -36,4 +39,21 @@ func (f *defaultFileManager) Exit(file *os.File) {
 
 func OpenFile(name string) func(func(*os.File) bool) {
 	return WithResourceManager(&defaultFileManager{name})
+}
+
+type mutexManager struct {
+	mu *sync.Mutex
+}
+
+func (m *mutexManager) Enter() struct{} {
+	m.mu.Lock()
+	return struct{}{}
+}
+
+func (m *mutexManager) Exit(struct{}) {
+	m.mu.Unlock()
+}
+
+func MutexLockGuard(m *sync.Mutex) func(yield func(struct{}) bool) {
+	return WithResourceManager(&mutexManager{m})
 }
